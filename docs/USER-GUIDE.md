@@ -41,7 +41,8 @@ Step 4, "Voiceover", one click:
 
 - **Reel 9:16** (1080×1920 or 720×1280) for Instagram / Facebook / TikTok.
 - **YouTube 16:9** (1920×1080 or 1280×720) for YouTube.
-- **Render my reel** renders in real time — a 60-second reel takes 60 seconds; keep the tab open. The download button then gives you the video file (WebM in Chrome, MP4 in Safari; YouTube accepts WebM directly, Instagram prefers MP4).
+- **Render my reel** renders in real time — a 60-second reel takes 60 seconds; keep the tab open. The download button then gives you the video file (WebM in Chrome, MP4 in Safari).
+- **Want MP4 instead?** After any render, tap "🎞 Also download as MP4 (best for Instagram)" — a free converter loads in your browser (~30 MB, first time only) and turns your render into an MP4 on your device. Nothing is uploaded anywhere. Conversion takes a minute or two for a short reel, longer for long videos; a live progress readout keeps you posted. YouTube accepts WebM directly, Instagram's uploader prefers MP4.
 - Keep on-screen text clear of the bottom ~250px and the right edge — platform UI overlays live there.
 
 ## Engagement features (always on)

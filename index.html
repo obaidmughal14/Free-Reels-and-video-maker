@@ -151,6 +151,7 @@
       .outwrap video{ width:100%; border-radius:14px; background:#000; display:block; }
       .dlbtn{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; margin-top:12px;
         background:var(--ok); color:#fff; text-decoration:none; font-weight:900; font-size:16px; border-radius:13px; padding:14px; }
+      .dlbtn.ghost{ background:transparent; border:1.5px solid var(--line); color:var(--ink); }
       footer.tips{ margin-top:26px; background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:20px 24px; box-shadow:var(--shadow); }
       footer.tips h2{ font-size:17px; margin:0 0 8px; font-weight:800; }
       footer.tips ul{ margin:0; padding-left:19px; color:var(--ink2); font-size:14px; line-height:1.65; }
@@ -432,6 +433,8 @@ Follow for one mind-blowing fact every day</textarea>
             <div class="outwrap" id="outWrap">
               <video id="outVideo" controls playsinline></video>
               <a class="dlbtn" id="dlBtn" href="#" download="reel.mp4">⬇ Download the video</a>
+              <a class="dlbtn ghost" id="mp4Btn" href="#" style="display:none">🎞 Also download as MP4 (best for Instagram)</a>
+              <div class="status" id="mp4Status" style="margin-top:8px"></div>
               <p class="hint" style="margin-top:8px">Button not saving on your phone? Long-press the video above (or right-click it) and choose “Save video” / “Download” there instead.</p>
               <p class="meta" id="outMeta"></p>
             </div>
@@ -482,7 +485,7 @@ Follow for one mind-blowing fact every day</textarea>
         <h2>Making it post-ready</h2>
         <ul>
           <li><strong>Auto mode:</strong> every generated reel is hook-first, ends with a save/follow CTA, and loops back to the hook — the three things that keep people watching and rewatching.</li>
-          <li><strong>Format:</strong> step 7 switches between Reel (9:16, for Instagram, TikTok and Shorts) and YouTube (16:9 wide). The file type depends on your browser: Chrome, Edge and Firefox record WebM, Safari records MP4, and both upload fine everywhere. If a recording ever comes out empty, the renderer automatically retries once in the other format before giving you the download.</li>
+          <li><strong>Format:</strong> step 7 switches between Reel (9:16, for Instagram, TikTok and Shorts) and YouTube (16:9 wide). The recorded file type depends on your browser: Chrome, Edge and Firefox record WebM, Safari records MP4. After any render you can also tap “Also download as MP4” for a free in-browser conversion — best for Instagram's uploader. If a recording ever comes out empty, the renderer automatically retries once in the other format before giving you the download.</li>
           <li><strong>Length:</strong> anything from 15 seconds to 10 minutes. Rendering is real time, so a 10-minute video takes about 10 minutes and makes a big file; HD quality keeps long videos lighter.</li>
           <li><strong>Sync:</strong> upload your voiceover first, then hit <strong>Auto-time scenes</strong> so captions land with the narration.</li>
           <li><strong>Pace:</strong> 2–4 seconds per scene keeps people watching; hooks work best under 8 words.</li>
@@ -1464,6 +1467,8 @@ $("renderBtn").addEventListener("click", async () => {
   const dl = $("dlBtn");
   dl.href = url; dl.setAttribute("download", name);
   dl.textContent = "⬇ Download the video (" + (isMp4 ? "MP4" : "WebM") + ", " + (blob.size / 1048576).toFixed(1) + " MB)";
+  state.lastRender = { blob, isMp4, nameBase: name.replace(/\.(webm|mp4)$/i, "") };
+  wireMp4Button();
   $("outMeta").innerHTML = "<strong>Done.</strong> " + W + " × " + H + " · " + (vidFmt === "youtube" ? "YouTube (16:9)" : "Reel (9:16)") + " · " + fmtTime(total) +
     (mixed ? " · with " + (state.voBuffer ? "voiceover + " : "") + (state.musicMode !== "none" ? "music" : "audio") : " · silent (captions only)") +
     ". Post it anywhere videos play.";
@@ -1475,6 +1480,97 @@ function setRenderStatus(msg, cls){
   const el = $("renderStatus");
   el.textContent = msg; el.className = "status" + (cls ? " " + cls : "");
   el.style.margin = "0"; el.style.flex = "1";
+}
+
+/* ---------------- MP4 download (free, in-browser conversion) ----------------
+   Chrome/Edge/Firefox record WebM from a canvas; Instagram's uploader wants MP4.
+   This button converts the finished render to MP4 with ffmpeg.wasm, loaded lazily
+   from a CDN only when the user taps it (nothing to install, no keys, no cost).
+   The ffmpeg worker script is embedded below as base64 so the single-file app
+   stays self-contained; the blob URL is same-origin, which is what lets the
+   worker start on any host (the CDN worker.js is blocked cross-origin). */
+const FFWORKER_B64 = "Ly8gU2VsZi1jb250YWluZWQgZmZtcGVnLndhc20gd29ya2VyIChidW5kbGVkIGNvbnN0LmpzICsgZXJyb3JzLmpzICsgd29ya2VyLmpzKQpjb25zdCBNSU1FX1RZUEVfSkFWQVNDUklQVCA9ICJ0ZXh0L2phdmFzY3JpcHQiOwpjb25zdCBNSU1FX1RZUEVfV0FTTSA9ICJhcHBsaWNhdGlvbi93YXNtIjsKY29uc3QgQ09SRV9WRVJTSU9OID0gIjAuMTIuNiI7CmNvbnN0IENPUkVfVVJMID0gYGh0dHBzOi8vdW5wa2cuY29tL0BmZm1wZWcvY29yZUAke0NPUkVfVkVSU0lPTn0vZGlzdC91bWQvZmZtcGVnLWNvcmUuanNgOwp2YXIgRkZNZXNzYWdlVHlwZTsKKGZ1bmN0aW9uIChGRk1lc3NhZ2VUeXBlKSB7CiAgICBGRk1lc3NhZ2VUeXBlWyJMT0FEIl0gPSAiTE9BRCI7CiAgICBGRk1lc3NhZ2VUeXBlWyJFWEVDIl0gPSAiRVhFQyI7CiAgICBGRk1lc3NhZ2VUeXBlWyJXUklURV9GSUxFIl0gPSAiV1JJVEVfRklMRSI7CiAgICBGRk1lc3NhZ2VUeXBlWyJSRUFEX0ZJTEUiXSA9ICJSRUFEX0ZJTEUiOwogICAgRkZNZXNzYWdlVHlwZVsiREVMRVRFX0ZJTEUiXSA9ICJERUxFVEVfRklMRSI7CiAgICBGRk1lc3NhZ2VUeXBlWyJSRU5BTUUiXSA9ICJSRU5BTUUiOwogICAgRkZNZXNzYWdlVHlwZVsiQ1JFQVRFX0RJUiJdID0gIkNSRUFURV9ESVIiOwogICAgRkZNZXNzYWdlVHlwZVsiTElTVF9ESVIiXSA9ICJMSVNUX0RJUiI7CiAgICBGRk1lc3NhZ2VUeXBlWyJERUxFVEVfRElSIl0gPSAiREVMRVRFX0RJUiI7CiAgICBGRk1lc3NhZ2VUeXBlWyJFUlJPUiJdID0gIkVSUk9SIjsKICAgIEZGTWVzc2FnZVR5cGVbIkRPV05MT0FEIl0gPSAiRE9XTkxPQUQiOwogICAgRkZNZXNzYWdlVHlwZVsiUFJPR1JFU1MiXSA9ICJQUk9HUkVTUyI7CiAgICBGRk1lc3NhZ2VUeXBlWyJMT0ciXSA9ICJMT0ciOwogICAgRkZNZXNzYWdlVHlwZVsiTU9VTlQiXSA9ICJNT1VOVCI7CiAgICBGRk1lc3NhZ2VUeXBlWyJVTk1PVU5UIl0gPSAiVU5NT1VOVCI7Cn0pKEZGTWVzc2FnZVR5cGUgfHwgKEZGTWVzc2FnZVR5cGUgPSB7fSkpOwoKY29uc3QgRVJST1JfVU5LTk9XTl9NRVNTQUdFX1RZUEUgPSBuZXcgRXJyb3IoInVua25vd24gbWVzc2FnZSB0eXBlIik7CmNvbnN0IEVSUk9SX05PVF9MT0FERUQgPSBuZXcgRXJyb3IoImZmbXBlZyBpcyBub3QgbG9hZGVkLCBjYWxsIGBhd2FpdCBmZm1wZWcubG9hZCgpYCBmaXJzdCIpOwpjb25zdCBFUlJPUl9URVJNSU5BVEVEID0gbmV3IEVycm9yKCJjYWxsZWQgRkZtcGVnLnRlcm1pbmF0ZSgpIik7CmNvbnN0IEVSUk9SX0lNUE9SVF9GQUlMVVJFID0gbmV3IEVycm9yKCJmYWlsZWQgdG8gaW1wb3J0IGZmbXBlZy1jb3JlLmpzIik7CgpsZXQgZmZtcGVnOwpjb25zdCBsb2FkID0gYXN5bmMgKHsgY29yZVVSTDogX2NvcmVVUkwsIHdhc21VUkw6IF93YXNtVVJMLCB3b3JrZXJVUkw6IF93b3JrZXJVUkwsIH0pID0+IHsKICAgIGNvbnN0IGZpcnN0ID0gIWZmbXBlZzsKICAgIHRyeSB7CiAgICAgICAgaWYgKCFfY29yZVVSTCkKICAgICAgICAgICAgX2NvcmVVUkwgPSBDT1JFX1VSTDsKICAgICAgICAvLyB3aGVuIHdlYiB3b3JrZXIgdHlwZSBpcyBgY2xhc3NpY2AuCiAgICAgICAgaW1wb3J0U2NyaXB0cyhfY29yZVVSTCk7CiAgICB9CiAgICBjYXRjaCB7CiAgICAgICAgaWYgKCFfY29yZVVSTCkKICAgICAgICAgICAgX2NvcmVVUkwgPSBDT1JFX1VSTC5yZXBsYWNlKCcvdW1kLycsICcvZXNtLycpOwogICAgICAgIC8vIHdoZW4gd2ViIHdvcmtlciB0eXBlIGlzIGBtb2R1bGVgLgogICAgICAgIHNlbGYuY3JlYXRlRkZtcGVnQ29yZSA9IChhd2FpdCBpbXBvcnQoCiAgICAgICAgLyogd2VicGFja0lnbm9yZTogdHJ1ZSAqLyAvKiBAdml0ZS1pZ25vcmUgKi8gX2NvcmVVUkwpKS5kZWZhdWx0OwogICAgICAgIGlmICghc2VsZi5jcmVhdGVGRm1wZWdDb3JlKSB7CiAgICAgICAgICAgIHRocm93IEVSUk9SX0lNUE9SVF9GQUlMVVJFOwogICAgICAgIH0KICAgIH0KICAgIGNvbnN0IGNvcmVVUkwgPSBfY29yZVVSTDsKICAgIGNvbnN0IHdhc21VUkwgPSBfd2FzbVVSTCA/IF93YXNtVVJMIDogX2NvcmVVUkwucmVwbGFjZSgvLmpzJC9nLCAiLndhc20iKTsKICAgIGNvbnN0IHdvcmtlclVSTCA9IF93b3JrZXJVUkwKICAgICAgICA/IF93b3JrZXJVUkwKICAgICAgICA6IF9jb3JlVVJMLnJlcGxhY2UoLy5qcyQvZywgIi53b3JrZXIuanMiKTsKICAgIGZmbXBlZyA9IGF3YWl0IHNlbGYuY3JlYXRlRkZtcGVnQ29yZSh7CiAgICAgICAgLy8gRml4IGBPdmVybG9hZCByZXNvbHV0aW9uIGZhaWxlZC5gIHdoZW4gdXNpbmcgbXVsdGktdGhyZWFkZWQgZmZtcGVnLWNvcmUuCiAgICAgICAgLy8gRW5jb2RlZCB3YXNtVVJMIGFuZCB3b3JrZXJVUkwgaW4gdGhlIFVSTCBhcyBhIGhhY2sgdG8gZml4IGxvY2F0ZUZpbGUgaXNzdWUuCiAgICAgICAgbWFpblNjcmlwdFVybE9yQmxvYjogYCR7Y29yZVVSTH0jJHtidG9hKEpTT04uc3RyaW5naWZ5KHsgd2FzbVVSTCwgd29ya2VyVVJMIH0pKX1gLAogICAgfSk7CiAgICBmZm1wZWcuc2V0TG9nZ2VyKChkYXRhKSA9PiBzZWxmLnBvc3RNZXNzYWdlKHsgdHlwZTogRkZNZXNzYWdlVHlwZS5MT0csIGRhdGEgfSkpOwogICAgZmZtcGVnLnNldFByb2dyZXNzKChkYXRhKSA9PiBzZWxmLnBvc3RNZXNzYWdlKHsKICAgICAgICB0eXBlOiBGRk1lc3NhZ2VUeXBlLlBST0dSRVNTLAogICAgICAgIGRhdGEsCiAgICB9KSk7CiAgICByZXR1cm4gZmlyc3Q7Cn07CmNvbnN0IGV4ZWMgPSAoeyBhcmdzLCB0aW1lb3V0ID0gLTEgfSkgPT4gewogICAgZmZtcGVnLnNldFRpbWVvdXQodGltZW91dCk7CiAgICBmZm1wZWcuZXhlYyguLi5hcmdzKTsKICAgIGNvbnN0IHJldCA9IGZmbXBlZy5yZXQ7CiAgICBmZm1wZWcucmVzZXQoKTsKICAgIHJldHVybiByZXQ7Cn07CmNvbnN0IHdyaXRlRmlsZSA9ICh7IHBhdGgsIGRhdGEgfSkgPT4gewogICAgZmZtcGVnLkZTLndyaXRlRmlsZShwYXRoLCBkYXRhKTsKICAgIHJldHVybiB0cnVlOwp9Owpjb25zdCByZWFkRmlsZSA9ICh7IHBhdGgsIGVuY29kaW5nIH0pID0+IGZmbXBlZy5GUy5yZWFkRmlsZShwYXRoLCB7IGVuY29kaW5nIH0pOwovLyBUT0RPOiBjaGVjayBpZiBkZWxldGlvbiB3b3Jrcy4KY29uc3QgZGVsZXRlRmlsZSA9ICh7IHBhdGggfSkgPT4gewogICAgZmZtcGVnLkZTLnVubGluayhwYXRoKTsKICAgIHJldHVybiB0cnVlOwp9Owpjb25zdCByZW5hbWUgPSAoeyBvbGRQYXRoLCBuZXdQYXRoIH0pID0+IHsKICAgIGZmbXBlZy5GUy5yZW5hbWUob2xkUGF0aCwgbmV3UGF0aCk7CiAgICByZXR1cm4gdHJ1ZTsKfTsKLy8gVE9ETzogY2hlY2sgaWYgY3JlYXRpb24gd29ya3MuCmNvbnN0IGNyZWF0ZURpciA9ICh7IHBhdGggfSkgPT4gewogICAgZmZtcGVnLkZTLm1rZGlyKHBhdGgpOwogICAgcmV0dXJuIHRydWU7Cn07CmNvbnN0IGxpc3REaXIgPSAoeyBwYXRoIH0pID0+IHsKICAgIGNvbnN0IG5hbWVzID0gZmZtcGVnLkZTLnJlYWRkaXIocGF0aCk7CiAgICBjb25zdCBub2RlcyA9IFtdOwogICAgZm9yIChjb25zdCBuYW1lIG9mIG5hbWVzKSB7CiAgICAgICAgY29uc3Qgc3RhdCA9IGZmbXBlZy5GUy5zdGF0KGAke3BhdGh9LyR7bmFtZX1gKTsKICAgICAgICBjb25zdCBpc0RpciA9IGZmbXBlZy5GUy5pc0RpcihzdGF0Lm1vZGUpOwogICAgICAgIG5vZGVzLnB1c2goeyBuYW1lLCBpc0RpciB9KTsKICAgIH0KICAgIHJldHVybiBub2RlczsKfTsKLy8gVE9ETzogY2hlY2sgaWYgZGVsZXRpb24gd29ya3MuCmNvbnN0IGRlbGV0ZURpciA9ICh7IHBhdGggfSkgPT4gewogICAgZmZtcGVnLkZTLnJtZGlyKHBhdGgpOwogICAgcmV0dXJuIHRydWU7Cn07CmNvbnN0IG1vdW50ID0gKHsgZnNUeXBlLCBvcHRpb25zLCBtb3VudFBvaW50IH0pID0+IHsKICAgIGNvbnN0IHN0ciA9IGZzVHlwZTsKICAgIGNvbnN0IGZzID0gZmZtcGVnLkZTLmZpbGVzeXN0ZW1zW3N0cl07CiAgICBpZiAoIWZzKQogICAgICAgIHJldHVybiBmYWxzZTsKICAgIGZmbXBlZy5GUy5tb3VudChmcywgb3B0aW9ucywgbW91bnRQb2ludCk7CiAgICByZXR1cm4gdHJ1ZTsKfTsKY29uc3QgdW5tb3VudCA9ICh7IG1vdW50UG9pbnQgfSkgPT4gewogICAgZmZtcGVnLkZTLnVubW91bnQobW91bnRQb2ludCk7CiAgICByZXR1cm4gdHJ1ZTsKfTsKc2VsZi5vbm1lc3NhZ2UgPSBhc3luYyAoeyBkYXRhOiB7IGlkLCB0eXBlLCBkYXRhOiBfZGF0YSB9LCB9KSA9PiB7CiAgICBjb25zdCB0cmFucyA9IFtdOwogICAgbGV0IGRhdGE7CiAgICB0cnkgewogICAgICAgIGlmICh0eXBlICE9PSBGRk1lc3NhZ2VUeXBlLkxPQUQgJiYgIWZmbXBlZykKICAgICAgICAgICAgdGhyb3cgRVJST1JfTk9UX0xPQURFRDsgLy8gZXNsaW50LWRpc2FibGUtbGluZQogICAgICAgIHN3aXRjaCAodHlwZSkgewogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuTE9BRDoKICAgICAgICAgICAgICAgIGRhdGEgPSBhd2FpdCBsb2FkKF9kYXRhKTsKICAgICAgICAgICAgICAgIGJyZWFrOwogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuRVhFQzoKICAgICAgICAgICAgICAgIGRhdGEgPSBleGVjKF9kYXRhKTsKICAgICAgICAgICAgICAgIGJyZWFrOwogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuV1JJVEVfRklMRToKICAgICAgICAgICAgICAgIGRhdGEgPSB3cml0ZUZpbGUoX2RhdGEpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIGNhc2UgRkZNZXNzYWdlVHlwZS5SRUFEX0ZJTEU6CiAgICAgICAgICAgICAgICBkYXRhID0gcmVhZEZpbGUoX2RhdGEpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIGNhc2UgRkZNZXNzYWdlVHlwZS5ERUxFVEVfRklMRToKICAgICAgICAgICAgICAgIGRhdGEgPSBkZWxldGVGaWxlKF9kYXRhKTsKICAgICAgICAgICAgICAgIGJyZWFrOwogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuUkVOQU1FOgogICAgICAgICAgICAgICAgZGF0YSA9IHJlbmFtZShfZGF0YSk7CiAgICAgICAgICAgICAgICBicmVhazsKICAgICAgICAgICAgY2FzZSBGRk1lc3NhZ2VUeXBlLkNSRUFURV9ESVI6CiAgICAgICAgICAgICAgICBkYXRhID0gY3JlYXRlRGlyKF9kYXRhKTsKICAgICAgICAgICAgICAgIGJyZWFrOwogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuTElTVF9ESVI6CiAgICAgICAgICAgICAgICBkYXRhID0gbGlzdERpcihfZGF0YSk7CiAgICAgICAgICAgICAgICBicmVhazsKICAgICAgICAgICAgY2FzZSBGRk1lc3NhZ2VUeXBlLkRFTEVURV9ESVI6CiAgICAgICAgICAgICAgICBkYXRhID0gZGVsZXRlRGlyKF9kYXRhKTsKICAgICAgICAgICAgICAgIGJyZWFrOwogICAgICAgICAgICBjYXNlIEZGTWVzc2FnZVR5cGUuTU9VTlQ6CiAgICAgICAgICAgICAgICBkYXRhID0gbW91bnQoX2RhdGEpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIGNhc2UgRkZNZXNzYWdlVHlwZS5VTk1PVU5UOgogICAgICAgICAgICAgICAgZGF0YSA9IHVubW91bnQoX2RhdGEpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIGRlZmF1bHQ6CiAgICAgICAgICAgICAgICB0aHJvdyBFUlJPUl9VTktOT1dOX01FU1NBR0VfVFlQRTsKICAgICAgICB9CiAgICB9CiAgICBjYXRjaCAoZSkgewogICAgICAgIHNlbGYucG9zdE1lc3NhZ2UoewogICAgICAgICAgICBpZCwKICAgICAgICAgICAgdHlwZTogRkZNZXNzYWdlVHlwZS5FUlJPUiwKICAgICAgICAgICAgZGF0YTogZS50b1N0cmluZygpLAogICAgICAgIH0pOwogICAgICAgIHJldHVybjsKICAgIH0KICAgIGlmIChkYXRhIGluc3RhbmNlb2YgVWludDhBcnJheSkgewogICAgICAgIHRyYW5zLnB1c2goZGF0YS5idWZmZXIpOwogICAgfQogICAgc2VsZi5wb3N0TWVzc2FnZSh7IGlkLCB0eXBlLCBkYXRhIH0sIHRyYW5zKTsKfTsK";
+let ffUtil = null, ffInst = null, mp4Url = null, mp4Pct = -1;
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function getFFmpegForConvert(){
+  if (ffInst) return ffInst;
+  const st = $("mp4Status");
+  st.textContent = "Loading the free MP4 converter (~30 MB, first time only)…";
+  const [ffmod, util] = await Promise.all([
+    import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm"),
+    import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm")
+  ]);
+  ffUtil = util;
+  const workerURL = URL.createObjectURL(new Blob([b64ToBytes(FFWORKER_B64)], { type: "text/javascript" }));
+  ffInst = new ffmod.FFmpeg();
+  /* NOTE: @ffmpeg/ffmpeg 0.12.x spawns its worker as type:"module", so the core
+     must be the ESM build — the UMD build has no default export and load()
+     then fails with "failed to import ffmpeg-core.js". The wasm is identical. */
+  const esmBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm";
+  const umdBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
+  ffInst.on("progress", ({ progress }) => {
+    if (typeof progress === "number" && progress >= 0) mp4Pct = Math.round(progress * 100);
+  });
+  await ffInst.load({
+    classWorkerURL: workerURL,
+    coreURL: await util.toBlobURL(esmBase + "/ffmpeg-core.js", "text/javascript"),
+    wasmURL: await util.toBlobURL(umdBase + "/ffmpeg-core.wasm", "application/wasm")
+  });
+  return ffInst;
+}
+async function convertToMp4(){
+  const btn = $("mp4Btn"), st = $("mp4Status");
+  const lr = state.lastRender;
+  if (!lr || !lr.blob){ st.textContent = "Render a video first, then convert it to MP4."; return; }
+  btn.style.pointerEvents = "none"; btn.style.opacity = ".55";
+  const t0 = Date.now();
+  mp4Pct = -1;
+  const tick = () => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    st.textContent = "Converting to MP4… " + (mp4Pct >= 0 ? mp4Pct + "% · " : "") + s + "s elapsed. Keep this tab open — a 15-second reel usually takes a minute or two on this device.";
+  };
+  const timer = setInterval(tick, 1000);
+  try {
+    const ff = await getFFmpegForConvert();
+    tick();
+    await ff.writeFile("in.webm", await ffUtil.fetchFile(lr.blob));
+    /* ultrafast keeps single-threaded wasm encoding bearable; quality stays high via crf 23 */
+    await ff.exec(["-i", "in.webm", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
+      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "out.mp4"]);
+    const data = await ff.readFile("out.mp4");
+    await ff.deleteFile("in.webm"); await ff.deleteFile("out.mp4");
+    const mp4Blob = new Blob([data], { type: "video/mp4" });
+    if (!mp4Blob.size) throw new Error("the converter produced an empty file");
+    if (mp4Url) URL.revokeObjectURL(mp4Url);
+    mp4Url = URL.createObjectURL(mp4Blob);
+    btn.href = mp4Url;
+    btn.setAttribute("download", lr.nameBase + ".mp4");
+    btn.textContent = "⬇ Download the video (MP4, " + (mp4Blob.size / 1048576).toFixed(1) + " MB)";
+    st.textContent = "MP4 ready — tap the button to download it. Plays on Instagram, TikTok and YouTube.";
+  } catch (e) {
+    st.textContent = "MP4 conversion didn't work (" + (e && e.message ? e.message : e) + "). The WebM download above still works — YouTube accepts it directly; only Instagram's uploader prefers MP4.";
+  } finally {
+    clearInterval(timer);
+    btn.style.pointerEvents = ""; btn.style.opacity = "";
+  }
+}
+function wireMp4Button(){
+  const btn = $("mp4Btn"), st = $("mp4Status");
+  const lr = state.lastRender;
+  if (!lr) return;
+  if (mp4Url){ URL.revokeObjectURL(mp4Url); mp4Url = null; }
+  st.textContent = "";
+  if (lr.isMp4){ btn.style.display = "none"; return; } /* Safari already records MP4 */
+  btn.style.display = "";
+  btn.href = "#";
+  btn.removeAttribute("download");
+  btn.textContent = "🎞 Also download as MP4 (best for Instagram)";
+  btn.onclick = (e) => { if (!btn.getAttribute("download")){ e.preventDefault(); convertToMp4(); } };
 }
 
 /* ---------------- init ---------------- */

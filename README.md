@@ -61,6 +61,7 @@ Step 4, "Voiceover":
 - **Reel 9:16** (1080×1920 Full HD or 720×1280 HD) for Instagram / Facebook / TikTok.
 - **YouTube 16:9** (1920×1080 Full HD or 1280×720 HD).
 - Real-time rendering (a 60s reel takes ~60s; keep the tab open). Records WebM in Chrome, MP4 in Safari, with an automatic fallback retry if a recording ever comes out empty.
+- **Your format, your choice:** after any render, tap "🎞 Also download as MP4" for a free in-browser WebM→MP4 conversion — best for Instagram's uploader. The converter loads once from a CDN (~30 MB, cached after); conversion happens entirely on your device, nothing is uploaded.
 - Safe-zone-aware layout keeps text clear of platform UI overlays.
 
 ### ✨ Engagement features (always on)
