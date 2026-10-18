@@ -2,6 +2,8 @@
 
 Reel Studio is a free, all-in-one faceless reel maker that runs entirely in your browser. No accounts, no API keys, no paid services.
 
+🌐 **Live demo:** [https://obaidasiaone-free-ai-reel-studio.static.hf.space](https://obaidasiaone-free-ai-reel-studio.static.hf.space)
+
 ## Quick start (Auto mode)
 
 1. Open `index.html` (or your hosted link).
